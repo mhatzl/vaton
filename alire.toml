@@ -1,0 +1,9 @@
+name = "vaton"
+description = "Shiny new project"
+version = "0.1.0-dev"
+
+authors = ["Manuel Hatzl"]
+maintainers = ["Manuel Hatzl <hatzlmanuel@outlook.com>"]
+maintainers-logins = ["mhatzl"]
+[[depends-on]]
+spark_unbound = "~0.2.1"
