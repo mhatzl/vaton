@@ -6,6 +6,7 @@ procedure Tests is
    Assembled_Number : Vaton.Number;
    Success : Boolean;
 begin
+   Vaton.Append(Partial_Number => Split_Number, Character => '-', Success => Success);
    Vaton.Append(Partial_Number => Split_Number, Character => '1', Success => Success);
    Vaton.Append(Partial_Number => Split_Number, Character => '2', Success => Success);
    Vaton.Append(Partial_Number => Split_Number, Character => '3', Success => Success);
@@ -17,16 +18,16 @@ begin
    Vaton.Append(Partial_Number => Split_Number, Character => '7', Success => Success);
    Vaton.Append(Partial_Number => Split_Number, Character => '8', Success => Success);
    Vaton.Append(Partial_Number => Split_Number, Character => '9', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '0', Success => Success); -- needs 64 Bit
-   --Vaton.Append(Partial_Number => Split_Number, Character => '1', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '2', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '3', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '4', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '5', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '6', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '7', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '8', Success => Success);
-   --Vaton.Append(Partial_Number => Split_Number, Character => '9', Success => Success); -- needs >64 Bit
+   Vaton.Append(Partial_Number => Split_Number, Character => '0', Success => Success); -- needs 64 Bit
+   Vaton.Append(Partial_Number => Split_Number, Character => '1', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '2', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '3', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '4', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '5', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '6', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '7', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '8', Success => Success);
+   Vaton.Append(Partial_Number => Split_Number, Character => '9', Success => Success); -- needs >64 Bit
 
 
    if Vaton.Is_Possible_Piece(Partial_Number => Split_Number, Character => 'A') then

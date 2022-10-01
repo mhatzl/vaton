@@ -82,6 +82,9 @@ package body Vaton is
                Combined.Integer := Combined.Integer * BASE_10;
             end loop;
             Combined.Integer := Combined.Integer + Standard.Integer(Digit_Array.Element(Partial_Number.Whole, Digit_Array.Last_Index(Partial_Number.Whole)));
+            if Partial_Number.Whole_Is_Negative then
+               Combined.Integer := Combined.Integer * (-1);
+            end if;
             return Combined;
          end;
       elsif Standard.Float(Digit_Array.Length(Partial_Number.Whole)) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Float(Standard.Long_Integer'Size) then
@@ -93,6 +96,9 @@ package body Vaton is
                Combined.Long_Integer := Combined.Long_Integer * Standard.Long_Integer(BASE_10);
             end loop;
             Combined.Long_Integer := Combined.Long_Integer + Standard.Long_Integer(Digit_Array.Element(Partial_Number.Whole, Digit_Array.Last_Index(Partial_Number.Whole)));
+            if Partial_Number.Whole_Is_Negative then
+               Combined.Long_Integer := Combined.Long_Integer * (-1);
+            end if;
             return Combined;
          end;
       elsif Standard.Float(Digit_Array.Length(Partial_Number.Whole)) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Float(Standard.Long_Long_Integer'Size) then
@@ -104,6 +110,9 @@ package body Vaton is
                Combined.Long_Long_Integer := Combined.Long_Long_Integer * Standard.Long_Long_Integer(BASE_10);
             end loop;
             Combined.Long_Long_Integer := Combined.Long_Long_Integer + Standard.Long_Long_Integer(Digit_Array.Element(Partial_Number.Whole, Digit_Array.Last_Index(Partial_Number.Whole)));
+            if Partial_Number.Whole_Is_Negative then
+               Combined.Long_Long_Integer := Combined.Long_Long_Integer * (-1);
+            end if;
             return Combined;
          end;
       else
@@ -115,6 +124,9 @@ package body Vaton is
                Combined.Big_Integer := Ada.Numerics.Big_Numbers.Big_Integers."*"(Combined.Big_Integer, Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer(BASE_10));
             end loop;
             Combined.Big_Integer := Ada.Numerics.Big_Numbers.Big_Integers."+"(Combined.Big_Integer, Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer(Standard.Integer(Digit_Array.Element(Partial_Number.Whole, Digit_Array.Last_Index(Partial_Number.Whole)))));
+            if Partial_Number.Whole_Is_Negative then
+               Combined.Big_Integer := Ada.Numerics.Big_Numbers.Big_Integers."*"(Combined.Big_Integer, Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer(-1));
+            end if;
             return Combined;
          end;
       end if;
