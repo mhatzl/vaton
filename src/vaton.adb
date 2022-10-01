@@ -4,6 +4,8 @@ package body Vaton is
    begin
       if Partial_Number.Next_Must_Be_Digit and then not Is_Digit(Character) then
          return False;
+      elsif Character = '0' and then not Digit_Array.Is_Empty(Partial_Number.Whole) and then Digit_Array.Element(Partial_Number.Whole, Digit_Array.First_Index(Partial_Number.Whole)) = 0 then
+         return False;
       elsif Character = '-' and then
         ((not Partial_Number.Whole_Is_Negative and then Digit_Array.Is_Empty(Partial_Number.Whole))
          or else (not Digit_Array.Is_Empty(Partial_Number.Whole) and then Partial_Number.Has_Exponent and then not Partial_Number.Exponent_Is_Negative and then Digit_Array.Is_Empty(Partial_Number.Exponent_Whole))) then
@@ -33,6 +35,8 @@ package body Vaton is
          or else not Digit_Array.Is_Empty(Partial_Number.Exponent_Fraction) or else Partial_Number.Exponent_Is_Negative
          or else Partial_Number.Has_Exponent or else Partial_Number.Has_Exponent_Fraction
          or else Partial_Number.Has_Fraction) then
+         return False;
+      elsif Digit_Array.Length(Partial_Number.Whole) > 1 and then Digit_Array.Element(Partial_Number.Whole, Digit_Array.First_Index(Partial_Number.Whole)) = 0 then
          return False;
       elsif not Digit_Array.Is_Empty(Partial_Number.Fraction) and then not Partial_Number.Has_Fraction then
          return False;
@@ -173,7 +177,15 @@ package body Vaton is
       end if;
    end Append;
 
-
+   procedure Reset (Partial_Number : in out Number_Pieces) is
+      New_Partial : Number_Pieces;
+   begin
+      Digit_Array.Clear(Partial_Number.Whole);
+      Digit_Array.Clear(Partial_Number.Fraction);
+      Digit_Array.Clear(Partial_Number.Exponent_Whole);
+      Digit_Array.Clear(Partial_Number.Exponent_Fraction);
+      Partial_Number := New_Partial;
+   end Reset;
 
    function Is_Digit (Character : Wide_Character) return Boolean is
    begin

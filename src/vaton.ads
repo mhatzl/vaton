@@ -101,6 +101,8 @@ is
      Post => Is_Valid_Partial_Number(Partial_Number);
 
 
+   procedure Reset (Partial_Number : in out Number_Pieces);
+
 private
 
    -- 3.4 is a good enough approximation from bits to base 10 length (log(10)/log(2) would be correct, but is somewhere between 3.3 and 3.4)
