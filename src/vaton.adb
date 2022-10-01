@@ -8,20 +8,19 @@ package body Vaton is
          return False;
       elsif Character = '-' and then
         ((not Partial_Number.Whole_Is_Negative and then Digit_Array.Is_Empty(Partial_Number.Whole))
-         or else (not Digit_Array.Is_Empty(Partial_Number.Whole) and then Partial_Number.Has_Exponent and then not Partial_Number.Exponent_Is_Negative and then Digit_Array.Is_Empty(Partial_Number.Exponent_Whole))) then
+         or else (not Digit_Array.Is_Empty(Partial_Number.Whole) and then Partial_Number.Has_Exponent and then not Partial_Number.Exponent_Is_Negative and then Digit_Array.Is_Empty(Partial_Number.Exponent))) then
          return True;
       elsif (Character = 'e' or else Character = 'E') and then not Digit_Array.Is_Empty(Partial_Number.Whole) and then Digit_Array.Is_Empty(Partial_Number.Fraction)
         and then not Partial_Number.Exponent_Is_Negative then
          return True;
       elsif Character = Decimal_Point and then not Digit_Array.Is_Empty(Partial_Number.Whole) and then
-        ((not Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Fraction))
-         or else (not Digit_Array.Is_Empty(Partial_Number.Exponent_Whole) and then Digit_Array.Is_Empty(Partial_Number.Exponent_Fraction))) then
+        not Partial_Number.Has_Exponent then
          return True;
-      elsif Character = '+' and then Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Exponent_Whole) then
+      elsif Character = '+' and then Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Exponent) then
          return True;
       elsif Is_Digit(Character) then
          return True;
-      elsif Character = '_' and then not (Digit_Array.Is_Empty(Partial_Number.Whole) or else (Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Exponent_Whole))) then
+      elsif Character = '_' and then not (Digit_Array.Is_Empty(Partial_Number.Whole) or else (Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Exponent))) then
          return True;
       else
          return False;
@@ -31,18 +30,16 @@ package body Vaton is
    function Is_Valid_Partial_Number(Partial_Number : Number_Pieces) return Boolean is
    begin
       if Digit_Array.Is_Empty(Partial_Number.Whole) and then
-        (not Digit_Array.Is_Empty(Partial_Number.Fraction) or else not Digit_Array.Is_Empty(Partial_Number.Exponent_Whole)
-         or else not Digit_Array.Is_Empty(Partial_Number.Exponent_Fraction) or else Partial_Number.Exponent_Is_Negative
-         or else Partial_Number.Has_Exponent or else Partial_Number.Has_Exponent_Fraction
+        (not Digit_Array.Is_Empty(Partial_Number.Fraction) or else not Digit_Array.Is_Empty(Partial_Number.Exponent)
+         or else Partial_Number.Exponent_Is_Negative
+         or else Partial_Number.Has_Exponent
          or else Partial_Number.Has_Fraction) then
          return False;
       elsif Digit_Array.Length(Partial_Number.Whole) > 1 and then Digit_Array.Element(Partial_Number.Whole, Digit_Array.First_Index(Partial_Number.Whole)) = 0 then
          return False;
       elsif not Digit_Array.Is_Empty(Partial_Number.Fraction) and then not Partial_Number.Has_Fraction then
          return False;
-      elsif not Digit_Array.Is_Empty(Partial_Number.Exponent_Whole) and then not Partial_Number.Has_Exponent then
-         return False;
-      elsif not Digit_Array.Is_Empty(Partial_Number.Exponent_Fraction) and then not Partial_Number.Has_Exponent_Fraction then
+      elsif not Digit_Array.Is_Empty(Partial_Number.Exponent) and then not Partial_Number.Has_Exponent then
          return False;
       elsif Partial_Number.Exponent_Is_Negative and then not Partial_Number.Has_Exponent then
          return False;
@@ -59,9 +56,7 @@ package body Vaton is
          return False;
       elsif Partial_Number.Has_Fraction and then Digit_Array.Is_Empty(Partial_Number.Fraction) then
          return False;
-      elsif Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Exponent_Whole) then
-         return False;
-      elsif Partial_Number.Has_Exponent_Fraction and then Digit_Array.Is_Empty(Partial_Number.Exponent_Fraction) then
+      elsif Partial_Number.Has_Exponent and then Digit_Array.Is_Empty(Partial_Number.Exponent) then
          return False;
       elsif Partial_Number.Exponent_Is_Negative and then not Partial_Number.Has_Exponent then
          return False;
@@ -75,6 +70,8 @@ package body Vaton is
    function To_Number (Partial_Number : Number_Pieces) return Number is
    begin
       if Digit_Array.Is_Empty(Partial_Number.Whole) then
+         return Number'(Kind => NaN);
+      elsif Partial_Number.Has_Fraction then
          return Number'(Kind => NaN);
       -- mhatzl: Check for floating point first!
       elsif Standard.Float(Digit_Array.Length(Partial_Number.Whole)) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Float(Standard.Integer'Size) then
@@ -145,7 +142,7 @@ package body Vaton is
          Partial_Number.Next_Must_Be_Digit := True;
          if Digit_Array.Is_Empty(Partial_Number.Whole) then
             Partial_Number.Whole_Is_Negative := True;
-         elsif Digit_Array.Is_Empty(Partial_Number.Exponent_Whole) then
+         elsif Digit_Array.Is_Empty(Partial_Number.Exponent) then
             Partial_Number.Exponent_Is_Negative := True;
          end if;
       elsif Character = '+' then
@@ -154,20 +151,14 @@ package body Vaton is
          Partial_Number.Has_Exponent := True;
       elsif Character = Decimal_Point then
          Partial_Number.Next_Must_Be_Digit := True;
-         if Partial_Number.Has_Exponent then
-            Partial_Number.Has_Exponent_Fraction := True;
-         else
-            Partial_Number.Has_Fraction := True;
-         end if;
+         Partial_Number.Has_Fraction := True;
       else
          Partial_Number.Next_Must_Be_Digit := False;
          declare
             Number : constant Digit := Character_To_Digit(Character);
          begin
-            if Partial_Number.Has_Exponent_Fraction then
-               Digit_Array.Append(Partial_Number.Exponent_Fraction, Number, Success);
-            elsif Partial_Number.Has_Exponent then
-               Digit_Array.Append(Partial_Number.Exponent_Whole, Number, Success);
+            if Partial_Number.Has_Exponent then
+               Digit_Array.Append(Partial_Number.Exponent, Number, Success);
             elsif Partial_Number.Has_Fraction then
                Digit_Array.Append(Partial_Number.Fraction, Number, Success);
             else
@@ -182,8 +173,7 @@ package body Vaton is
    begin
       Digit_Array.Clear(Partial_Number.Whole);
       Digit_Array.Clear(Partial_Number.Fraction);
-      Digit_Array.Clear(Partial_Number.Exponent_Whole);
-      Digit_Array.Clear(Partial_Number.Exponent_Fraction);
+      Digit_Array.Clear(Partial_Number.Exponent);
       Partial_Number := New_Partial;
    end Reset;
 

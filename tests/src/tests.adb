@@ -6,6 +6,7 @@ procedure Tests is
    Assembled_Number : Vaton.Number;
    Success : Boolean;
 begin
+
    Vaton.Append(Partial_Number => Split_Number, Character => '0', Success => Success);
    if Vaton.Is_Possible_Piece(Partial_Number => Split_Number, Character => '1') then
       Text_IO.Put_Line("Leading zeros not allowed!");

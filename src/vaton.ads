@@ -38,25 +38,21 @@ is
    type Number_Pieces is record
       Whole : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 10);
       Fraction : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
-      Exponent_Whole : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
-      Exponent_Fraction : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 2);
+      Exponent : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
       Whole_Is_Negative : Boolean := False;
       Exponent_Is_Negative : Boolean := False;
       Has_Exponent : Boolean := False;
       Has_Fraction : Boolean := False;
-      Has_Exponent_Fraction : Boolean := False;
       Next_Must_Be_Digit : Boolean := False;
    end record;
 
    function "=" (Left, Right : Number_Pieces) return Boolean is (Left.Whole = Right.Whole and then
                                                                  Left.Fraction = Right.Fraction and then
-                                                                 Left.Exponent_Whole = Right.Exponent_Whole and then
-                                                                 Left.Exponent_Fraction = Right.Exponent_Fraction and then
+                                                                 Left.Exponent = Right.Exponent and then
                                                                  Left.Whole_Is_Negative = Right.Whole_Is_Negative and then
                                                                  Left.Exponent_Is_Negative = Right.Exponent_Is_Negative and then
                                                                  Left.Has_Exponent = Right.Has_Exponent and then
-                                                                 Left.Has_Fraction = Right.Has_Fraction and then
-                                                                 Left.Has_Exponent_Fraction = Right.Has_Exponent_Fraction
+                                                                 Left.Has_Fraction = Right.Has_Fraction
                                                                 );
 
    -- Function returns `True` if the given character is a decimal digit (0..9).
@@ -67,9 +63,10 @@ is
      with Pre => Is_Digit(Character);
 
    -- Function returns `True` if the given character could represent a part of a number.
-   -- e.g. `-` is allowed at the beginning of the whole number and the exponential whole number,
+   -- e.g. `-` is allowed at the beginning of the whole number and the exponential number,
    -- the decimal point marks the beginning of the fraction part,
    -- and `e` or `E` mark the beginning of the exponential part.
+   -- '+' may be set after the beginning of the exponential part.
    -- Underscore '_' is allowed between digits.
    -- Digits 0..9 are always possible.
    function Is_Possible_Piece (Partial_Number : Number_Pieces; Character : Wide_Character; Decimal_Point : Wide_Character := '.') return Boolean
