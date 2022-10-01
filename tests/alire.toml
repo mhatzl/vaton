@@ -11,3 +11,5 @@ executables = ["tests"]
 vaton = "~0.1.0-dev"
 [[pins]]
 vaton = { path='..' }
+[[depends-on]]
+spark_unbound = "~0.2.1"
