@@ -5,9 +5,12 @@ with Spark_Unbound.Arrays;
 package Vaton with
    SPARK_Mode
 is
+   package Big_Numbers renames Ada.Numerics.Big_Numbers;
+
+   BIG_NUMBER_DIGIT_LIMIT : constant Standard.Integer := 1900; -- Limitation of the Big_Number implementation
 
    type Number_Kind is
-     (NaN, Float, Integer, Long_Float, Long_Integer, Long_Long_Integer, Big_Real, Big_Integer);
+     (NaN, Float, Integer, Long_Float, Long_Long_Float, Long_Integer, Long_Long_Integer, Big_Real, Big_Integer);
 
    type Number (Kind : Number_Kind := NaN) is record
       case Kind is
@@ -21,12 +24,14 @@ is
             Long_Float : Standard.Long_Float := 0.0;
          when Long_Integer =>
             Long_Integer : Standard.Long_Integer := 0;
+         when Long_Long_Float =>
+            Long_Long_Float : Standard.Long_Long_Float := 0.0;
          when Long_Long_Integer =>
             Long_Long_Integer : Standard.Long_Long_Integer := 0;
          when Big_Real =>
-            Big_Real : Ada.Numerics.Big_Numbers.Big_Reals.Valid_Big_Real := 0.0;
+            Big_Real : Big_Numbers.Big_Reals.Valid_Big_Real := 0.0;
          when Big_Integer =>
-            Big_Integer : Ada.Numerics.Big_Numbers.Big_Integers.Valid_Big_Integer := 0;
+            Big_Integer : Big_Numbers.Big_Integers.Valid_Big_Integer := 0;
       end case;
    end record;
 
@@ -93,6 +98,8 @@ is
      with Pre => Is_Valid_Number(Partial_Number);
 
 
+   function To_Integer (Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number;
+
    procedure Append (Partial_Number : in out Number_Pieces; Character : Wide_Character; Success : out Boolean; Decimal_Point : Wide_Character := '.')
      with Pre => Is_Valid_Decimal_Point(Decimal_Point) and then Is_Possible_Piece(Partial_Number, Character, Decimal_Point) and then Is_Valid_Partial_Number(Partial_Number),
      Post => Is_Valid_Partial_Number(Partial_Number);
@@ -102,8 +109,20 @@ is
 
 private
 
-   -- 3.4 is a good enough approximation from bits to base 10 length (log(10)/log(2) would be correct, but is somewhere between 3.3 and 3.4)
-   BASE_10_LENGTH_TO_BIT_SIZE : constant Standard.Float := 3.4;
+   -- 4 is a good enough approximation from bits to base 10 length (log(10)/log(2) ~ 3.4 would be correct, but would require float conversions)
+   BASE_10_LENGTH_TO_BIT_SIZE : constant Standard.Integer := 4;
    BASE_10 : constant Standard.Integer := 10;
+
+   -- 0.3 is approximation for log(2)/log(10) to get lower bound
+   -- Note: 2^Standard.Float'EMax = 10^MAX_FLOAT_EXPONENT => log(2)/log(10) * Standard.Float'EMax = MAX_FLOAT_EXPONENT
+   -- Note: Length of whole part must also be added since normalization moves number to 1.x
+   MAX_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer(0.3 * Standard.Float'Machine_Emax);
+   MIN_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer(0.3 * Standard.Float'Machine_Emin);
+
+   MAX_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer(0.3 * Standard.Long_Float'Machine_Emax);
+   MIN_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer(0.3 * Standard.Long_Float'Machine_Emin);
+
+   MAX_LONG_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer(0.3 * Standard.Long_Long_Float'Machine_Emax);
+   MIN_LONG_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer(0.3 * Standard.Long_Long_Float'Machine_Emin);
 
 end Vaton;
