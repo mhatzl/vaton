@@ -20,5 +20,9 @@ project Tests is
       for Artifacts (".") use ("share");
    end Install;
 
+   package Pretty_Printer is
+      for Default_Switches ("ada") use ("-M100");
+   end Pretty_Printer;
+
 end Tests;
 
