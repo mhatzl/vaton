@@ -7,3 +7,5 @@ maintainers = ["Manuel Hatzl <hatzlmanuel@outlook.com>"]
 maintainers-logins = ["mhatzl"]
 [[depends-on]]
 spark_unbound = "~0.2.1"
+[[depends-on]]
+gnatprove = "^12.1.1"

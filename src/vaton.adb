@@ -91,7 +91,7 @@ package body Vaton is
          return Number'(Kind => NaN);
       elsif Partial_Number.Has_Exponent or else Partial_Number.Has_Fraction then
          declare
-            Exponent : Number := To_Integer (Partial_Number.Exponent, Partial_Number.Exponent_Is_Negative);
+            Exponent : constant Number := To_Integer (Partial_Number.Exponent, Partial_Number.Exponent_Is_Negative);
          begin
             if Digit_Array.Length(Partial_Number.Whole) + Digit_Array.Length(Partial_Number.Fraction) < Standard.Float'Digits
               and then (Exponent.Kind = NaN or else (Exponent.Kind = Integer and then
@@ -318,10 +318,19 @@ package body Vaton is
             Number : constant Digit := Character_To_Digit(Character);
          begin
             if Partial_Number.Has_Exponent then
+               if Partial_Number.Exponent.Arr = null then
+                  Partial_Number.Exponent := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
+               end if;
                Digit_Array.Append(Partial_Number.Exponent, Number, Success);
             elsif Partial_Number.Has_Fraction then
+               if Partial_Number.Fraction.Arr = null then
+                  Partial_Number.Fraction := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
+               end if;
                Digit_Array.Append(Partial_Number.Fraction, Number, Success);
             else
+               if Partial_Number.Whole.Arr = null then
+                  Partial_Number.Whole := Digit_Array.To_Unbound_Array(Initial_Capacity => 10);
+               end if;
                Digit_Array.Append(Partial_Number.Whole, Number, Success);
             end if;
          end;

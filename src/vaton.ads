@@ -41,9 +41,9 @@ is
    use Digit_Array;
 
    type Number_Pieces is record
-      Whole : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 10);
-      Fraction : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
-      Exponent : Digit_Array.Unbound_Array := Digit_Array.To_Unbound_Array(Initial_Capacity => 5);
+      Whole : Digit_Array.Unbound_Array;
+      Fraction : Digit_Array.Unbound_Array;
+      Exponent : Digit_Array.Unbound_Array;
       Whole_Is_Negative : Boolean := False;
       Exponent_Is_Negative : Boolean := False;
       Has_Exponent : Boolean := False;
@@ -51,7 +51,7 @@ is
       Next_Must_Be_Digit : Boolean := False;
    end record;
 
-   function "=" (Left, Right : Number_Pieces) return Boolean is (Left.Whole = Right.Whole and then
+   overriding function "=" (Left, Right : Number_Pieces) return Boolean is (Left.Whole = Right.Whole and then
                                                                  Left.Fraction = Right.Fraction and then
                                                                  Left.Exponent = Right.Exponent and then
                                                                  Left.Whole_Is_Negative = Right.Whole_Is_Negative and then
@@ -93,17 +93,14 @@ is
                                                                                              Is_Digit(Decimal_Point)
                                                                                             ));
 
-
    function To_Number (Partial_Number : Number_Pieces) return Number
      with Pre => Is_Valid_Number(Partial_Number);
-
 
    function To_Integer (Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number;
 
    procedure Append (Partial_Number : in out Number_Pieces; Character : Wide_Character; Success : out Boolean; Decimal_Point : Wide_Character := '.')
      with Pre => Is_Valid_Decimal_Point(Decimal_Point) and then Is_Possible_Piece(Partial_Number, Character, Decimal_Point) and then Is_Valid_Partial_Number(Partial_Number),
      Post => Is_Valid_Partial_Number(Partial_Number);
-
 
    procedure Reset (Partial_Number : in out Number_Pieces);
 
