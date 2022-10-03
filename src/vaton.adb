@@ -1,4 +1,6 @@
-package body Vaton is
+with Vaton.Integer_Conversions;
+
+package body Vaton with SPARK_Mode is
 
    function Is_Possible_Piece
      (Partial_Number : Number_Pieces; Character : Wide_Character;
@@ -43,7 +45,7 @@ package body Vaton is
                Success        : Boolean;
             begin
                Digit_Array.Copy (Split_Exponent, Partial_Number.Exponent, Success);
-               if Success then
+               if Success and then Split_Exponent.Arr /= null and then Digit_Array.Capacity(Split_Exponent) < Digit_Array.Extended_Index'Last then
                   Digit_Array.Append (Split_Exponent, Character_To_Digit (Character), Success);
                   if Success
                     and then
@@ -53,7 +55,21 @@ package body Vaton is
                      return False;
                   end if;
                end if;
+               Digit_Array.Clear(Split_Exponent);
+               if not Digit_Array.Is_Empty(Split_Exponent) then
+                  raise Program_Error;
+               end if;
             end;
+         end if;
+
+         if Digit_Array.Capacity(Partial_Number.Whole) < Digit_Array.Extended_Index'Last and then
+           Partial_Number.Has_Fraction = False and then Partial_Number.Has_Exponent = False then
+            return False;
+         elsif Digit_Array.Capacity(Partial_Number.Fraction) < Digit_Array.Extended_Index'Last and then
+           Partial_Number.Has_Exponent = False then
+            return False;
+         elsif Digit_Array.Capacity(Partial_Number.Exponent) < Digit_Array.Extended_Index'Last then
+            return False;
          end if;
 
          return True;
@@ -82,8 +98,7 @@ package body Vaton is
       elsif Digit_Array.Length (Partial_Number.Whole) > 1
         and then
           Digit_Array.Element
-            (Partial_Number.Whole, Digit_Array.First_Index (Partial_Number.Whole)) =
-          0
+            (Partial_Number.Whole, Digit_Array.First_Index (Partial_Number.Whole)) = 0
       then
          return False;
       elsif not Digit_Array.Is_Empty (Partial_Number.Fraction)
@@ -153,19 +168,25 @@ package body Vaton is
                declare
                   Combined : Number (Float);
                   Whole    : Number (Float);
+                  Old_Index : Natural := Natural'Last;
                begin
                   if Partial_Number.Has_Fraction then
                      for Index in reverse
                        Digit_Array.First_Index (Partial_Number.Fraction) ..
                          Digit_Array.Last_Index (Partial_Number.Fraction)
                      loop
-                        Combined.Float :=
-                          Combined.Float +
-                          Standard.Float (Digit_Array.Element (Partial_Number.Fraction, Index));
+                        if (Combined.Float >= 0.0 and then Standard.Float'Last - Combined.Float > Standard.Float (Digit_Array.Element (Partial_Number.Fraction, Index)))
+                          or else Combined.Float < 0.0 then
+                           Combined.Float := Combined.Float + Standard.Float (Digit_Array.Element (Partial_Number.Fraction, Index));
+                        end if;
                         Combined.Float := Combined.Float / Standard.Float (BASE_10);
+
+                        pragma Loop_Invariant (Old_Index > Index);
+                        Old_Index := Index;
                      end loop;
                   end if;
 
+                  Old_Index := 0;
                   for Index in
                     Digit_Array.First_Index (Partial_Number.Whole) ..
                       Digit_Array.Last_Index (Partial_Number.Whole) - 1
@@ -174,6 +195,9 @@ package body Vaton is
                        Whole.Float +
                        Standard.Float (Digit_Array.Element (Partial_Number.Whole, Index));
                      Whole.Float := Whole.Float * Standard.Float (BASE_10);
+
+                     pragma Loop_Invariant (Old_Index < Index);
+                     Old_Index := Index;
                   end loop;
                   Whole.Float :=
                     Whole.Float +
@@ -366,7 +390,7 @@ package body Vaton is
                   Combined.Big_Real :=
                     Big_Numbers.Big_Reals."+" (Combined.Big_Real, Whole.Big_Real);
 
-                  if Partial_Number.Has_Exponent then
+                  if Partial_Number.Has_Exponent and then Exponent.Kind = Integer then
                      Combined.Big_Real :=
                        Big_Numbers.Big_Reals."*"
                          (Combined.Big_Real,
@@ -401,107 +425,67 @@ package body Vaton is
         Standard.Integer'Size
       then
          declare
-            Combined : Number (Integer);
+            Result : Number (Integer);
+            Combined : Standard.Integer := 0;
+            procedure Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Integer,
+                                                                              Combined => Combined,
+                                                                              "-" => Standard."-",
+                                                                              "+" => Standard."+",
+                                                                              "*" => Standard."*",
+                                                                              "/" => Standard."/",
+                                                                              "<" => Standard."<",
+                                                                              ">" => Standard.">",
+                                                                              ">=" => Standard.">=",
+                                                                             To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Integer);
          begin
-            for Index in
-              Digit_Array.First_Index (Partial_Integer) ..
-                Digit_Array.Last_Index (Partial_Integer) - 1
-            loop
-               Combined.Integer :=
-                 Combined.Integer + Standard.Integer (Digit_Array.Element (Partial_Integer, Index));
-               Combined.Integer := Combined.Integer * BASE_10;
-            end loop;
-            Combined.Integer :=
-              Combined.Integer +
-              Standard.Integer
-                (Digit_Array.Element (Partial_Integer, Digit_Array.Last_Index (Partial_Integer)));
-            if Is_Negative then
-               Combined.Integer := Combined.Integer * (-1);
-            end if;
-            return Combined;
+            Convert(Partial_Integer, Is_Negative);
+            Result.Integer := Combined;
+            return Result;
          end;
       elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
         Standard.Long_Integer'Size
       then
          declare
-            Combined : Number (Long_Integer);
+            Result : Number (Long_Integer);
+            Combined : Standard.Long_Integer := 0;
+            procedure Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Integer,
+                                                                              Combined => Combined,
+                                                                              "-" => Standard."-",
+                                                                              "+" => Standard."+",
+                                                                              "*" => Standard."*",
+                                                                              "/" => Standard."/",
+                                                                              "<" => Standard."<",
+                                                                              ">" => Standard.">",
+                                                                              ">=" => Standard.">=",
+                                                                             To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Long_Integer);
          begin
-            for Index in
-              Digit_Array.First_Index (Partial_Integer) ..
-                Digit_Array.Last_Index (Partial_Integer) - 1
-            loop
-               Combined.Long_Integer :=
-                 Combined.Long_Integer +
-                 Standard.Long_Integer (Digit_Array.Element (Partial_Integer, Index));
-               Combined.Long_Integer := Combined.Long_Integer * Standard.Long_Integer (BASE_10);
-            end loop;
-            Combined.Long_Integer :=
-              Combined.Long_Integer +
-              Standard.Long_Integer
-                (Digit_Array.Element (Partial_Integer, Digit_Array.Last_Index (Partial_Integer)));
-            if Is_Negative then
-               Combined.Long_Integer := Combined.Long_Integer * (-1);
-            end if;
-            return Combined;
+            Convert(Partial_Integer, Is_Negative);
+            Result.Long_Integer := Combined;
+            return Result;
          end;
       elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
         Standard.Long_Long_Integer'Size
       then
          declare
-            Combined : Number (Long_Long_Integer);
+            Result : Number (Long_Long_Integer);
+            Combined : Standard.Long_Long_Integer := 0;
+            procedure Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Long_Integer,
+                                                                              Combined => Combined,
+                                                                              "-" => Standard."-",
+                                                                              "+" => Standard."+",
+                                                                              "*" => Standard."*",
+                                                                              "/" => Standard."/",
+                                                                              "<" => Standard."<",
+                                                                              ">" => Standard.">",
+                                                                              ">=" => Standard.">=",
+                                                                             To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Long_Long_Integer);
          begin
-            for Index in
-              Digit_Array.First_Index (Partial_Integer) ..
-                Digit_Array.Last_Index (Partial_Integer) - 1
-            loop
-               Combined.Long_Long_Integer :=
-                 Combined.Long_Long_Integer +
-                 Standard.Long_Long_Integer (Digit_Array.Element (Partial_Integer, Index));
-               Combined.Long_Long_Integer :=
-                 Combined.Long_Long_Integer * Standard.Long_Long_Integer (BASE_10);
-            end loop;
-            Combined.Long_Long_Integer :=
-              Combined.Long_Long_Integer +
-              Standard.Long_Long_Integer
-                (Digit_Array.Element (Partial_Integer, Digit_Array.Last_Index (Partial_Integer)));
-            if Is_Negative then
-               Combined.Long_Long_Integer := Combined.Long_Long_Integer * (-1);
-            end if;
-            return Combined;
+            Convert(Partial_Integer, Is_Negative);
+            Result.Long_Long_Integer := Combined;
+            return Result;
          end;
       else
-         declare
-            Combined : Number (Big_Integer);
-         begin
-            for Index in
-              Digit_Array.First_Index (Partial_Integer) ..
-                Digit_Array.Last_Index (Partial_Integer) - 1
-            loop
-               Combined.Big_Integer :=
-                 Ada.Numerics.Big_Numbers.Big_Integers."+"
-                   (Combined.Big_Integer,
-                    Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer
-                      (Standard.Integer (Digit_Array.Element (Partial_Integer, Index))));
-               Combined.Big_Integer :=
-                 Ada.Numerics.Big_Numbers.Big_Integers."*"
-                   (Combined.Big_Integer,
-                    Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer (BASE_10));
-            end loop;
-            Combined.Big_Integer :=
-              Ada.Numerics.Big_Numbers.Big_Integers."+"
-                (Combined.Big_Integer,
-                 Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer
-                   (Standard.Integer
-                      (Digit_Array.Element
-                         (Partial_Integer, Digit_Array.Last_Index (Partial_Integer)))));
-            if Is_Negative then
-               Combined.Big_Integer :=
-                 Ada.Numerics.Big_Numbers.Big_Integers."*"
-                   (Combined.Big_Integer,
-                    Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer (-1));
-            end if;
-            return Combined;
-         end;
+         return Vaton.Integer_Conversions.Convert_Big_Integer(Partial_Integer, Is_Negative);
       end if;
    end To_Integer;
 
@@ -510,6 +494,7 @@ package body Vaton is
       Decimal_Point  :        Wide_Character := '.')
    is
    begin
+      Success := True;
       if Character = '_' then
          Partial_Number.Next_Must_Be_Digit := True;
       elsif Character = '-' then
@@ -526,7 +511,8 @@ package body Vaton is
       elsif Character = Decimal_Point then
          Partial_Number.Next_Must_Be_Digit := True;
          Partial_Number.Has_Fraction       := True;
-      else
+      elsif Is_Digit(Character) then
+         Success := False;
          Partial_Number.Next_Must_Be_Digit := False;
          declare
             Number : constant Digit := Character_To_Digit (Character);
@@ -535,29 +521,38 @@ package body Vaton is
                if Partial_Number.Exponent.Arr = null then
                   Partial_Number.Exponent := Digit_Array.To_Unbound_Array (Initial_Capacity => 5);
                end if;
-               Digit_Array.Append (Partial_Number.Exponent, Number, Success);
+               if Partial_Number.Exponent.Arr /= null and then Digit_Array.Capacity(Partial_Number.Exponent) < Digit_Array.Extended_Index'Last then
+                  Digit_Array.Append (Partial_Number.Exponent, Number, Success);
+               end if;
             elsif Partial_Number.Has_Fraction then
                if Partial_Number.Fraction.Arr = null then
                   Partial_Number.Fraction := Digit_Array.To_Unbound_Array (Initial_Capacity => 5);
                end if;
-               Digit_Array.Append (Partial_Number.Fraction, Number, Success);
+               if Partial_Number.Fraction.Arr /= null and then Digit_Array.Capacity(Partial_Number.Fraction) < Digit_Array.Extended_Index'Last then
+                  Digit_Array.Append (Partial_Number.Fraction, Number, Success);
+               end if;
             else
                if Partial_Number.Whole.Arr = null then
                   Partial_Number.Whole := Digit_Array.To_Unbound_Array (Initial_Capacity => 10);
                end if;
-               Digit_Array.Append (Partial_Number.Whole, Number, Success);
+               if Partial_Number.Whole.Arr /= null and then Digit_Array.Capacity(Partial_Number.Whole) < Digit_Array.Extended_Index'Last then
+                  Digit_Array.Append (Partial_Number.Whole, Number, Success);
+               end if;
             end if;
          end;
       end if;
    end Append;
 
    procedure Reset (Partial_Number : in out Number_Pieces) is
-      New_Partial : Number_Pieces;
    begin
       Digit_Array.Clear (Partial_Number.Whole);
       Digit_Array.Clear (Partial_Number.Fraction);
       Digit_Array.Clear (Partial_Number.Exponent);
-      Partial_Number := New_Partial;
+      Partial_Number.Whole_Is_Negative := False;
+      Partial_Number.Exponent_Is_Negative := False;
+      Partial_Number.Has_Fraction := False;
+      Partial_Number.Has_Exponent := False;
+      Partial_Number.Next_Must_Be_Digit := False;
    end Reset;
 
    function Is_Digit (Character : Wide_Character) return Boolean is

@@ -62,11 +62,17 @@ is
       and then Left.Has_Fraction = Right.Has_Fraction);
 
    -- Function returns `True` if the given character is a decimal digit (0..9).
-   function Is_Digit (Character : Wide_Character) return Boolean;
+   function Is_Digit (Character : Wide_Character) return Boolean
+     with Post => (if Is_Digit'Result then (Character = '0' or else Character = '1' or else Character = '2' or else Character = '3' or else Character = '4'
+                                           or else Character = '5' or else Character = '6' or else Character = '7' or else Character = '8' or else Character = '9')
+      else (Character /= '0' and then Character /= '1' and then Character /= '2' and then Character /= '3' and then Character /= '4'
+                                           and then Character /= '5' and then Character /= '6' and then Character /= '7' and then Character /= '8' and then Character /= '9'));
 
    -- Function to convert the character representation of a digit into the Digit type.
    function Character_To_Digit (Character : Wide_Character) return Digit with
-      Pre => Is_Digit (Character);
+     Pre => Is_Digit (Character),
+     Post => (if Character = '0' then Character_To_Digit'Result = 0 elsif Character = '1' then Character_To_Digit'Result = 1 elsif
+                Character = '2' then Character_To_Digit'Result = 2 elsif Character = '3' then Character_To_Digit'Result = 3);
 
    -- Function returns `True` if the given character could represent a part of a number.
    -- e.g. `-` is allowed at the beginning of the whole number and the exponential number,
