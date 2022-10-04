@@ -8,7 +8,7 @@ procedure Tests is
 begin
 
    Vaton.Append (Partial_Number => Split_Number, Character => '-', Success => Success);
-   for Index in 2 .. 16 loop
+   for Index in 1 .. 2 loop
       Vaton.Append (Partial_Number => Split_Number, Character => '1', Success => Success);
    end loop;
    Vaton.Append (Partial_Number => Split_Number, Character => '.', Success => Success);

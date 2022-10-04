@@ -2,7 +2,8 @@ with Ada.Numerics.Big_Numbers.Big_Integers;
 
 package body Vaton.Integer_Conversions with SPARK_Mode is
 
-   procedure Convert(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) is
+   function Convert(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Integer_Base is
+      Combined : Integer_Base := To_Integer_Base(0);
       Old_Index : Natural := 0;
    begin
       for Index in
@@ -28,6 +29,8 @@ package body Vaton.Integer_Conversions with SPARK_Mode is
       if Is_Negative and then Combined > To_Integer_Base(0) then
          Combined := Combined * To_Integer_Base(-1);
       end if;
+
+      return Combined;
    end Convert;
 
    function Convert_Big_Integer(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number is

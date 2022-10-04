@@ -1,4 +1,5 @@
 with Vaton.Integer_Conversions;
+with Vaton.Float_Conversions;
 
 package body Vaton with SPARK_Mode is
 
@@ -39,27 +40,9 @@ package body Vaton with SPARK_Mode is
          return True;
       elsif Is_Digit (Character) then
          -- Exponent is restricted to Integer
-         if not Digit_Array.Is_Empty (Partial_Number.Exponent) then
-            declare
-               Split_Exponent : Digit_Array.Unbound_Array;
-               Success        : Boolean;
-            begin
-               Digit_Array.Copy (Split_Exponent, Partial_Number.Exponent, Success);
-               if Success and then Split_Exponent.Arr /= null and then Digit_Array.Capacity(Split_Exponent) < Digit_Array.Extended_Index'Last then
-                  Digit_Array.Append (Split_Exponent, Character_To_Digit (Character), Success);
-                  if Success
-                    and then
-                      To_Integer (Split_Exponent, Partial_Number.Exponent_Is_Negative).Kind /=
-                      Integer
-                  then
-                     return False;
-                  end if;
-               end if;
-               Digit_Array.Clear(Split_Exponent);
-               if not Digit_Array.Is_Empty(Split_Exponent) then
-                  raise Program_Error;
-               end if;
-            end;
+         if Digit_Array.Length (Partial_Number.Exponent) < Digit_Array.Extended_Index'Last
+           and then (Digit_Array.Length (Partial_Number.Exponent) + 1) * BASE_10_LENGTH_TO_BIT_SIZE >= Standard.Integer'Size then
+            return False;
          end if;
 
          if Digit_Array.Capacity(Partial_Number.Whole) < Digit_Array.Extended_Index'Last and then
@@ -69,7 +52,7 @@ package body Vaton with SPARK_Mode is
            Partial_Number.Has_Exponent = False then
             return False;
          elsif Digit_Array.Capacity(Partial_Number.Exponent) < Digit_Array.Extended_Index'Last then
-            return False;
+               return False;
          end if;
 
          return True;
@@ -95,10 +78,9 @@ package body Vaton with SPARK_Mode is
          or else Partial_Number.Has_Fraction)
       then
          return False;
-      elsif Digit_Array.Length (Partial_Number.Whole) > 1
-        and then
-          Digit_Array.Element
-            (Partial_Number.Whole, Digit_Array.First_Index (Partial_Number.Whole)) = 0
+      elsif Digit_Array.Last_Index(Partial_Number.Whole) > Digit_Array.No_Index
+        and then Digit_Array.Length (Partial_Number.Whole) > 1
+        and then Digit_Array.Element (Partial_Number.Whole, Digit_Array.First_Index (Partial_Number.Whole)) = 0
       then
          return False;
       elsif not Digit_Array.Is_Empty (Partial_Number.Fraction)
@@ -166,57 +148,17 @@ package body Vaton with SPARK_Mode is
                    MAX_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole))))
             then
                declare
-                  Combined : Number (Float);
-                  Whole    : Number (Float);
-                  Old_Index : Natural := Natural'Last;
+                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
+                  Result : Number(Float);
+                  function Convert is new Vaton.Float_Conversions.Convert(Float_Base => Standard.Float,
+                                                                          "+" => Standard."+",
+                                                                          "*" => Standard."*",
+                                                                          "/" => Standard."/",
+                                                                          "**" => Standard."**",
+                                                                          To_Float_Base => Vaton.Float_Conversions.Number_To_Float);
                begin
-                  if Partial_Number.Has_Fraction then
-                     for Index in reverse
-                       Digit_Array.First_Index (Partial_Number.Fraction) ..
-                         Digit_Array.Last_Index (Partial_Number.Fraction)
-                     loop
-                        if (Combined.Float >= 0.0 and then Standard.Float'Last - Combined.Float > Standard.Float (Digit_Array.Element (Partial_Number.Fraction, Index)))
-                          or else Combined.Float < 0.0 then
-                           Combined.Float := Combined.Float + Standard.Float (Digit_Array.Element (Partial_Number.Fraction, Index));
-                        end if;
-                        Combined.Float := Combined.Float / Standard.Float (BASE_10);
-
-                        pragma Loop_Invariant (Old_Index > Index);
-                        Old_Index := Index;
-                     end loop;
-                  end if;
-
-                  Old_Index := 0;
-                  for Index in
-                    Digit_Array.First_Index (Partial_Number.Whole) ..
-                      Digit_Array.Last_Index (Partial_Number.Whole) - 1
-                  loop
-                     Whole.Float :=
-                       Whole.Float +
-                       Standard.Float (Digit_Array.Element (Partial_Number.Whole, Index));
-                     Whole.Float := Whole.Float * Standard.Float (BASE_10);
-
-                     pragma Loop_Invariant (Old_Index < Index);
-                     Old_Index := Index;
-                  end loop;
-                  Whole.Float :=
-                    Whole.Float +
-                    Standard.Float
-                      (Digit_Array.Element
-                         (Partial_Number.Whole, Digit_Array.Last_Index (Partial_Number.Whole)));
-
-                  Combined.Float := Combined.Float + Whole.Float;
-
-                  if Partial_Number.Has_Exponent then
-                     Combined.Float :=
-                       Combined.Float * (Standard.Float (BASE_10)**Exponent.Integer);
-                  end if;
-
-                  if Partial_Number.Whole_Is_Negative then
-                     Combined.Float := Combined.Float * (-1.0);
-                  end if;
-
-                  return Combined;
+                  Result.Float := Convert(Partial_Number, Exponent_Value);
+                  return Result;
                end;
             elsif Digit_Array.Length (Partial_Number.Whole) +
               Digit_Array.Length (Partial_Number.Fraction) <
@@ -232,49 +174,17 @@ package body Vaton with SPARK_Mode is
                    MAX_LONG_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole))))
             then
                declare
-                  Combined : Number (Long_Float);
-                  Whole    : Number (Long_Float);
+                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
+                  Result : Number(Long_Float);
+                  function Convert is new Vaton.Float_Conversions.Convert(Float_Base => Standard.Long_Float,
+                                                                          "+" => Standard."+",
+                                                                          "*" => Standard."*",
+                                                                          "/" => Standard."/",
+                                                                          "**" => Standard."**",
+                                                                          To_Float_Base => Vaton.Float_Conversions.Number_To_Long_Float);
                begin
-                  if Partial_Number.Has_Fraction then
-                     for Index in reverse
-                       Digit_Array.First_Index (Partial_Number.Fraction) ..
-                         Digit_Array.Last_Index (Partial_Number.Fraction)
-                     loop
-                        Combined.Long_Float :=
-                          Combined.Long_Float +
-                          Standard.Long_Float
-                            (Digit_Array.Element (Partial_Number.Fraction, Index));
-                        Combined.Long_Float := Combined.Long_Float / Standard.Long_Float (BASE_10);
-                     end loop;
-                  end if;
-
-                  for Index in
-                    Digit_Array.First_Index (Partial_Number.Whole) ..
-                      Digit_Array.Last_Index (Partial_Number.Whole) - 1
-                  loop
-                     Whole.Long_Float :=
-                       Whole.Long_Float +
-                       Standard.Long_Float (Digit_Array.Element (Partial_Number.Whole, Index));
-                     Whole.Long_Float := Whole.Long_Float * Standard.Long_Float (BASE_10);
-                  end loop;
-                  Whole.Long_Float :=
-                    Whole.Long_Float +
-                    Standard.Long_Float
-                      (Digit_Array.Element
-                         (Partial_Number.Whole, Digit_Array.Last_Index (Partial_Number.Whole)));
-
-                  Combined.Long_Float := Combined.Long_Float + Whole.Long_Float;
-
-                  if Partial_Number.Has_Exponent then
-                     Combined.Long_Float :=
-                       Combined.Long_Float * (Standard.Long_Float (BASE_10)**Exponent.Integer);
-                  end if;
-
-                  if Partial_Number.Whole_Is_Negative then
-                     Combined.Long_Float := Combined.Long_Float * (-1.0);
-                  end if;
-
-                  return Combined;
+                  Result.Long_Float := Convert(Partial_Number, Exponent_Value);
+                  return Result;
                end;
             elsif Digit_Array.Length (Partial_Number.Whole) +
               Digit_Array.Length (Partial_Number.Fraction) <
@@ -290,52 +200,17 @@ package body Vaton with SPARK_Mode is
                    MAX_LONG_LONG_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole))))
             then
                declare
-                  Combined : Number (Long_Long_Float);
-                  Whole    : Number (Long_Long_Float);
+                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
+                  Result : Number(Long_Long_Float);
+                  function Convert is new Vaton.Float_Conversions.Convert(Float_Base => Standard.Long_Long_Float,
+                                                                          "+" => Standard."+",
+                                                                          "*" => Standard."*",
+                                                                          "/" => Standard."/",
+                                                                          "**" => Standard."**",
+                                                                          To_Float_Base => Vaton.Float_Conversions.Number_To_Long_Long_Float);
                begin
-                  if Partial_Number.Has_Fraction then
-                     for Index in reverse
-                       Digit_Array.First_Index (Partial_Number.Fraction) ..
-                         Digit_Array.Last_Index (Partial_Number.Fraction)
-                     loop
-                        Combined.Long_Long_Float :=
-                          Combined.Long_Long_Float +
-                          Standard.Long_Long_Float
-                            (Digit_Array.Element (Partial_Number.Fraction, Index));
-                        Combined.Long_Long_Float :=
-                          Combined.Long_Long_Float / Standard.Long_Long_Float (BASE_10);
-                     end loop;
-                  end if;
-
-                  for Index in
-                    Digit_Array.First_Index (Partial_Number.Whole) ..
-                      Digit_Array.Last_Index (Partial_Number.Whole) - 1
-                  loop
-                     Whole.Long_Long_Float :=
-                       Whole.Long_Long_Float +
-                       Standard.Long_Long_Float (Digit_Array.Element (Partial_Number.Whole, Index));
-                     Whole.Long_Long_Float :=
-                       Whole.Long_Long_Float * Standard.Long_Long_Float (BASE_10);
-                  end loop;
-                  Whole.Long_Long_Float :=
-                    Whole.Long_Long_Float +
-                    Standard.Long_Long_Float
-                      (Digit_Array.Element
-                         (Partial_Number.Whole, Digit_Array.Last_Index (Partial_Number.Whole)));
-
-                  Combined.Long_Long_Float := Combined.Long_Long_Float + Whole.Long_Long_Float;
-
-                  if Partial_Number.Has_Exponent then
-                     Combined.Long_Long_Float :=
-                       Combined.Long_Long_Float *
-                       (Standard.Long_Long_Float (BASE_10)**Exponent.Integer);
-                  end if;
-
-                  if Partial_Number.Whole_Is_Negative then
-                     Combined.Long_Long_Float := Combined.Long_Long_Float * (-1.0);
-                  end if;
-
-                  return Combined;
+                  Result.Long_Long_Float := Convert(Partial_Number, Exponent_Value);
+                  return Result;
                end;
             elsif Exponent.Kind = Integer
               and then Digit_Array.Length (Partial_Number.Whole) >
@@ -345,66 +220,11 @@ package body Vaton with SPARK_Mode is
                return Number'(Kind => NaN);
             else
                declare
-                  Combined : Number (Big_Real);
-                  Whole    : Number (Big_Real);
+                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
+                  Result : Number(Big_Real);
                begin
-                  if Partial_Number.Has_Fraction then
-                     for Index in reverse
-                       Digit_Array.First_Index (Partial_Number.Fraction) ..
-                         Digit_Array.Last_Index (Partial_Number.Fraction)
-                     loop
-                        Combined.Big_Real :=
-                          Big_Numbers.Big_Reals."+"
-                            (Combined.Big_Real,
-                             Big_Numbers.Big_Reals.To_Real
-                               (Standard.Integer
-                                  (Digit_Array.Element (Partial_Number.Fraction, Index))));
-                        Combined.Big_Real :=
-                          Big_Numbers.Big_Reals."/"
-                            (Combined.Big_Real, Big_Numbers.Big_Reals.To_Real (BASE_10));
-                     end loop;
-                  end if;
-
-                  for Index in
-                    Digit_Array.First_Index (Partial_Number.Whole) ..
-                      Digit_Array.Last_Index (Partial_Number.Whole) - 1
-                  loop
-                     Whole.Big_Real :=
-                       Big_Numbers.Big_Reals."+"
-                         (Whole.Big_Real,
-                          Big_Numbers.Big_Reals.To_Real
-                            (Standard.Integer (Digit_Array.Element (Partial_Number.Whole, Index))));
-                     Whole.Big_Real :=
-                       Big_Numbers.Big_Reals."*"
-                         (Whole.Big_Real, Big_Numbers.Big_Reals.To_Real (BASE_10));
-                  end loop;
-                  Whole.Big_Real :=
-                    Big_Numbers.Big_Reals."+"
-                      (Whole.Big_Real,
-                       Big_Numbers.Big_Reals.To_Real
-                         (Standard.Integer
-                            (Digit_Array.Element
-                               (Partial_Number.Whole,
-                                 Digit_Array.Last_Index (Partial_Number.Whole)))));
-
-                  Combined.Big_Real :=
-                    Big_Numbers.Big_Reals."+" (Combined.Big_Real, Whole.Big_Real);
-
-                  if Partial_Number.Has_Exponent and then Exponent.Kind = Integer then
-                     Combined.Big_Real :=
-                       Big_Numbers.Big_Reals."*"
-                         (Combined.Big_Real,
-                          Big_Numbers.Big_Reals."**"
-                            (Big_Numbers.Big_Reals.To_Real (10), Exponent.Integer));
-                  end if;
-
-                  if Partial_Number.Whole_Is_Negative then
-                     Combined.Big_Real :=
-                       Big_Numbers.Big_Reals."*"
-                         (Combined.Big_Real, Big_Numbers.Big_Reals.To_Real (-1));
-                  end if;
-
-                  return Combined;
+                  Result.Big_Real := Vaton.Float_Conversions.Convert_Big_Real(Partial_Number, Exponent_Value);
+                  return Result;
                end;
             end if;
          end;
@@ -426,9 +246,7 @@ package body Vaton with SPARK_Mode is
       then
          declare
             Result : Number (Integer);
-            Combined : Standard.Integer := 0;
-            procedure Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Integer,
-                                                                              Combined => Combined,
+            function Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Integer,
                                                                               "-" => Standard."-",
                                                                               "+" => Standard."+",
                                                                               "*" => Standard."*",
@@ -438,8 +256,7 @@ package body Vaton with SPARK_Mode is
                                                                               ">=" => Standard.">=",
                                                                              To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Integer);
          begin
-            Convert(Partial_Integer, Is_Negative);
-            Result.Integer := Combined;
+            Result.Integer := Convert(Partial_Integer, Is_Negative);
             return Result;
          end;
       elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
@@ -447,9 +264,7 @@ package body Vaton with SPARK_Mode is
       then
          declare
             Result : Number (Long_Integer);
-            Combined : Standard.Long_Integer := 0;
-            procedure Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Integer,
-                                                                              Combined => Combined,
+            function Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Integer,
                                                                               "-" => Standard."-",
                                                                               "+" => Standard."+",
                                                                               "*" => Standard."*",
@@ -459,8 +274,7 @@ package body Vaton with SPARK_Mode is
                                                                               ">=" => Standard.">=",
                                                                              To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Long_Integer);
          begin
-            Convert(Partial_Integer, Is_Negative);
-            Result.Long_Integer := Combined;
+            Result.Long_Integer := Convert(Partial_Integer, Is_Negative);
             return Result;
          end;
       elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
@@ -468,9 +282,7 @@ package body Vaton with SPARK_Mode is
       then
          declare
             Result : Number (Long_Long_Integer);
-            Combined : Standard.Long_Long_Integer := 0;
-            procedure Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Long_Integer,
-                                                                              Combined => Combined,
+            function Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Long_Integer,
                                                                               "-" => Standard."-",
                                                                               "+" => Standard."+",
                                                                               "*" => Standard."*",
@@ -480,8 +292,7 @@ package body Vaton with SPARK_Mode is
                                                                               ">=" => Standard.">=",
                                                                              To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Long_Long_Integer);
          begin
-            Convert(Partial_Integer, Is_Negative);
-            Result.Long_Long_Integer := Combined;
+            Result.Long_Long_Integer := Convert(Partial_Integer, Is_Negative);
             return Result;
          end;
       else

@@ -9,7 +9,7 @@ project Tests is
    for Main use ("tests.adb");
 
    package Compiler is
-      for Default_Switches ("ada") use ("-Og", "-ffunction-sections", "-fdata-sections", "-g", "-gnat2022", "-gnatVa", "-gnatwa.X", "-gnatyaABbc-defhiIklM79nOprStux");
+      for Default_Switches ("ada") use ("-Og", "-ffunction-sections", "-fdata-sections", "-g", "-gnat2022", "-gnatVa", "-gnatwa.X", "-gnatyaAB-defhIklM79nOprStx");
    end Compiler;
 
    package Binder is

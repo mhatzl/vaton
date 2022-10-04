@@ -2,7 +2,7 @@ package Vaton.Integer_Conversions with SPARK_Mode is
   
    generic
       type Integer_Base is (<>);
-      Combined : in out Integer_Base;
+      --Combined : in out Integer_Base;
       
       with function "-"(L,R : Integer_Base) return Integer_Base;
       with function "+"(L,R : Integer_Base) return Integer_Base;
@@ -12,7 +12,7 @@ package Vaton.Integer_Conversions with SPARK_Mode is
       with function ">"(L,R : Integer_Base) return Boolean;
       with function ">="(L,R : Integer_Base) return Boolean;
       with function To_Integer_Base(Number : Standard.Integer) return Integer_Base;
-   procedure Convert(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean)
+   function Convert(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Integer_Base
      with Pre => not Digit_Array.Is_Empty(Partial_Integer);
    
    function Convert_Big_Integer(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number
