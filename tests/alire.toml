@@ -13,3 +13,5 @@ vaton = "~0.1.0-dev"
 vaton = { path='..' }
 [[depends-on]]
 spark_unbound = "~0.2.1"
+[[depends-on]]
+aunit = "^22.0.0"
