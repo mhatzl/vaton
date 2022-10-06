@@ -4,6 +4,7 @@ with AUnit.Reporter.Text;
 with AUnit.Run;
 with GNAT.OS_Lib;
 with Integers_Suite;
+with Invalids_Suite;
 
 procedure Tests is
    use type AUnit.Status;
@@ -11,6 +12,7 @@ procedure Tests is
    Reporter : AUnit.Reporter.Text.Text_Reporter;
 
    function Integers_Test_Runner is new AUnit.Run.Test_Runner_With_Status(Integers_Suite.Suite);
+   function Invalids_Test_Runner is new AUnit.Run.Test_Runner_With_Status(Invalids_Suite.Suite);
 
    --  Split_Number     : Vaton.Number_Pieces;
    --  Assembled_Number : Vaton.Number;
@@ -18,6 +20,11 @@ procedure Tests is
 begin
    -- Run valid Integer conversion tests
    if Integers_Test_Runner(Reporter) /= AUnit.Success then
+      GNAT.OS_Lib.OS_Exit(1);
+   end if;
+
+   -- Run invalid conversion tests
+   if Invalids_Test_Runner(Reporter) /= AUnit.Success then
       GNAT.OS_Lib.OS_Exit(1);
    end if;
 
