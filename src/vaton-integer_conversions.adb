@@ -36,38 +36,25 @@ package body Vaton.Integer_Conversions with SPARK_Mode is
    function Convert_Big_Integer(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number is
       Combined : Number (Big_Integer);
       Old_Index : Natural := 0;
+
+      package Big_Int renames Ada.Numerics.Big_Numbers.Big_Integers;
+      use type Big_Int.Valid_Big_Integer;
    begin
       for Index in
         Digit_Array.First_Index (Partial_Integer) ..
         Digit_Array.Last_Index (Partial_Integer) - 1
       loop
-         Combined.Big_Integer :=
-           Ada.Numerics.Big_Numbers.Big_Integers."+"
-             (Combined.Big_Integer,
-              Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer
-                (Standard.Integer (Digit_Array.Element (Partial_Integer, Index))));
-         Combined.Big_Integer :=
-           Ada.Numerics.Big_Numbers.Big_Integers."*"
-             (Combined.Big_Integer,
-              Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer (BASE_10));
+         Combined.Big_Integer := Combined.Big_Integer + Big_Int.To_Big_Integer(Standard.Integer(Digit_Array.Element (Partial_Integer, Index)));
+         Combined.Big_Integer := Combined.Big_Integer * Big_Int.To_Big_Integer(BASE_10);
 
          pragma Loop_Invariant (Old_Index < Index);
          Old_Index := Index;
       end loop;
 
-      Combined.Big_Integer :=
-        Ada.Numerics.Big_Numbers.Big_Integers."+"
-          (Combined.Big_Integer,
-           Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer
-             (Standard.Integer
-                (Digit_Array.Element
-                     (Partial_Integer, Digit_Array.Last_Index (Partial_Integer)))));
+      Combined.Big_Integer := Combined.Big_Integer + Big_Int.To_Big_Integer(Standard.Integer(Digit_Array.Element(Partial_Integer, Digit_Array.Last_Index (Partial_Integer))));
 
       if Is_Negative then
-         Combined.Big_Integer :=
-           Ada.Numerics.Big_Numbers.Big_Integers."*"
-             (Combined.Big_Integer,
-              Ada.Numerics.Big_Numbers.Big_Integers.To_Big_Integer (-1));
+         Combined.Big_Integer := Combined.Big_Integer * Big_Int.To_Big_Integer(-1);
       end if;
       return Combined;
    end Convert_Big_Integer;

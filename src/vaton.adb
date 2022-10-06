@@ -40,8 +40,7 @@ package body Vaton with SPARK_Mode is
          return True;
       elsif Is_Digit (Character) then
          -- Exponent is restricted to Integer
-         if Digit_Array.Length (Partial_Number.Exponent) < Digit_Array.Extended_Index'Last
-           and then (Digit_Array.Length (Partial_Number.Exponent) + 1) * BASE_10_LENGTH_TO_BIT_SIZE >= Standard.Integer'Size then
+         if (Digit_Array.Length (Partial_Number.Exponent) + 1) * BASE_10_LENGTH_TO_BIT_SIZE >= Standard.Integer'Size then
             return False;
          end if;
 
@@ -94,9 +93,12 @@ package body Vaton with SPARK_Mode is
       elsif Partial_Number.Exponent_Is_Negative and then not Partial_Number.Has_Exponent then
          return False;
       elsif not Digit_Array.Is_Empty (Partial_Number.Exponent)
-        and then To_Integer (Partial_Number.Exponent, Partial_Number.Exponent_Is_Negative).Kind /=
-          Integer
+        and then To_Integer (Partial_Number.Exponent, Partial_Number.Exponent_Is_Negative).Kind /= Integer
       then
+         return False;
+      elsif Digit_Array.Length (Partial_Number.Whole) > BIG_NUMBER_DIGIT_LIMIT
+        or else Digit_Array.Length (Partial_Number.Fraction) > BIG_NUMBER_DIGIT_LIMIT
+        or else Digit_Array.Length (Partial_Number.Exponent) > BIG_NUMBER_DIGIT_LIMIT then
          return False;
       else
          return True;
@@ -133,99 +135,84 @@ package body Vaton with SPARK_Mode is
          declare
             Exponent : constant Number :=
               To_Integer (Partial_Number.Exponent, Partial_Number.Exponent_Is_Negative);
+            Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
          begin
-            if Digit_Array.Length (Partial_Number.Whole) +
-              Digit_Array.Length (Partial_Number.Fraction) <
-              Standard.Float'Digits
-              and then
-              (Exponent.Kind = NaN
-               or else
-               (Exponent.Kind = Integer
-                and then
-                ((Partial_Number.Exponent_Is_Negative
-                  and then Exponent.Integer > MIN_FLOAT_EXPONENT)
-                 or else Exponent.Integer <=
-                   MAX_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole))))
+            if Digit_Array.Length (Partial_Number.Whole) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Integer'Size
+              and then Digit_Array.Length (Partial_Number.Whole) + Digit_Array.Length (Partial_Number.Fraction) < Standard.Float'Digits
+              and then (Exponent.Kind = NaN
+                        or else (Exponent.Kind = Integer
+                                 and then ((Partial_Number.Exponent_Is_Negative
+                                            and then Exponent.Integer > MIN_FLOAT_EXPONENT)
+                                           or else (not Partial_Number.Exponent_Is_Negative
+                                            and then Exponent.Integer <= MAX_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole)))))
             then
                declare
-                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
                   Result : Number(Float);
-                  function Convert is new Vaton.Float_Conversions.Convert(Float_Base => Standard.Float,
+                  function Combine is new Vaton.Float_Conversions.Combine(Float_Base => Standard.Float,
                                                                           "+" => Standard."+",
                                                                           "*" => Standard."*",
                                                                           "/" => Standard."/",
                                                                           "**" => Standard."**",
+                                                                          "<" => Standard."<",
                                                                           To_Float_Base => Vaton.Float_Conversions.Number_To_Float);
                begin
-                  Result.Float := Convert(Partial_Number, Exponent_Value);
+                  Result.Float := Combine(Partial_Number, Exponent_Value);
                   return Result;
                end;
-            elsif Digit_Array.Length (Partial_Number.Whole) +
-              Digit_Array.Length (Partial_Number.Fraction) <
-              Standard.Long_Float'Digits
-              and then
-              (Exponent.Kind = NaN
-               or else
-               (Exponent.Kind = Integer
-                and then
-                ((Partial_Number.Exponent_Is_Negative
-                  and then Exponent.Integer > MIN_LONG_FLOAT_EXPONENT)
-                 or else Exponent.Integer <=
-                   MAX_LONG_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole))))
+            elsif Digit_Array.Length (Partial_Number.Whole) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Integer'Size
+              and then Digit_Array.Length (Partial_Number.Fraction) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Integer'Size
+              and then Digit_Array.Length (Partial_Number.Whole) + Digit_Array.Length (Partial_Number.Fraction) < Standard.Long_Float'Digits
+              and then (Exponent.Kind = NaN
+                        or else (Exponent.Kind = Integer
+                                 and then ((Partial_Number.Exponent_Is_Negative
+                                            and then Exponent.Integer > MIN_LONG_FLOAT_EXPONENT)
+                                           or else (not Partial_Number.Exponent_Is_Negative
+                                            and then Exponent.Integer <= MAX_LONG_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole)))))
             then
                declare
-                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
                   Result : Number(Long_Float);
-                  function Convert is new Vaton.Float_Conversions.Convert(Float_Base => Standard.Long_Float,
+                  function Combine is new Vaton.Float_Conversions.Combine(Float_Base => Standard.Long_Float,
                                                                           "+" => Standard."+",
                                                                           "*" => Standard."*",
                                                                           "/" => Standard."/",
                                                                           "**" => Standard."**",
+                                                                          "<" => Standard."<",
                                                                           To_Float_Base => Vaton.Float_Conversions.Number_To_Long_Float);
                begin
-                  Result.Long_Float := Convert(Partial_Number, Exponent_Value);
+                  Result.Long_Float := Combine(Partial_Number, Exponent_Value);
                   return Result;
                end;
-            elsif Digit_Array.Length (Partial_Number.Whole) +
-              Digit_Array.Length (Partial_Number.Fraction) <
-              Standard.Long_Long_Float'Digits
-              and then
-              (Exponent.Kind = NaN
-               or else
-               (Exponent.Kind = Integer
-                and then
-                ((Partial_Number.Exponent_Is_Negative
-                  and then Exponent.Integer > MIN_LONG_LONG_FLOAT_EXPONENT)
-                 or else Exponent.Integer <=
-                   MAX_LONG_LONG_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole))))
+            elsif Digit_Array.Length (Partial_Number.Whole) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Long_Integer'Size
+              and then Digit_Array.Length (Partial_Number.Fraction) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Long_Integer'Size
+              and then Digit_Array.Length (Partial_Number.Whole) + Digit_Array.Length (Partial_Number.Fraction) < Standard.Long_Long_Float'Digits
+              and then (Exponent.Kind = NaN
+                        or else (Exponent.Kind = Integer
+                                 and then ((Partial_Number.Exponent_Is_Negative
+                                            and then Exponent.Integer > MIN_LONG_LONG_FLOAT_EXPONENT)
+                                           or else (not Partial_Number.Exponent_Is_Negative
+                                            and then Exponent.Integer <= MAX_LONG_LONG_FLOAT_EXPONENT - Digit_Array.Length (Partial_Number.Whole)))))
             then
                declare
-                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
                   Result : Number(Long_Long_Float);
-                  function Convert is new Vaton.Float_Conversions.Convert(Float_Base => Standard.Long_Long_Float,
+                  function Combine is new Vaton.Float_Conversions.Combine(Float_Base => Standard.Long_Long_Float,
                                                                           "+" => Standard."+",
                                                                           "*" => Standard."*",
                                                                           "/" => Standard."/",
                                                                           "**" => Standard."**",
+                                                                          "<" => Standard."<",
                                                                           To_Float_Base => Vaton.Float_Conversions.Number_To_Long_Long_Float);
                begin
-                  Result.Long_Long_Float := Convert(Partial_Number, Exponent_Value);
+                  Result.Long_Long_Float := Combine(Partial_Number, Exponent_Value);
                   return Result;
                end;
             elsif Exponent.Kind = Integer
-              and then Digit_Array.Length (Partial_Number.Whole) >
-                BIG_NUMBER_DIGIT_LIMIT - Exponent.Integer -
-                  Digit_Array.Length (Partial_Number.Fraction)
+              and then ((Exponent.Integer < 0 and then Digit_Array.Length (Partial_Number.Whole) > BIG_NUMBER_DIGIT_LIMIT - Digit_Array.Length (Partial_Number.Fraction))
+                        or else Exponent.Integer > Standard.Integer'Last - Digit_Array.Length (Partial_Number.Whole)
+                        or else (Digit_Array.Length (Partial_Number.Whole) + Exponent.Integer > BIG_NUMBER_DIGIT_LIMIT - Digit_Array.Length (Partial_Number.Fraction)))
             then
                return Number'(Kind => NaN);
             else
-               declare
-                  Exponent_Value : constant Standard.Integer := (if Exponent.Kind = Integer then Exponent.Integer else 1);
-                  Result : Number(Big_Real);
-               begin
-                  Result.Big_Real := Vaton.Float_Conversions.Convert_Big_Real(Partial_Number, Exponent_Value);
-                  return Result;
-               end;
+               return Vaton.Float_Conversions.Convert_Big_Real(Partial_Number, Exponent_Value);
             end if;
          end;
       else
@@ -241,9 +228,7 @@ package body Vaton with SPARK_Mode is
         or else Digit_Array.Length (Partial_Integer) > BIG_NUMBER_DIGIT_LIMIT
       then
          return Number'(Kind => NaN);
-      elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
-        Standard.Integer'Size
-      then
+      elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Integer'Size then
          declare
             Result : Number (Integer);
             function Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Integer,
@@ -259,9 +244,7 @@ package body Vaton with SPARK_Mode is
             Result.Integer := Convert(Partial_Integer, Is_Negative);
             return Result;
          end;
-      elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
-        Standard.Long_Integer'Size
-      then
+      elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Integer'Size then
          declare
             Result : Number (Long_Integer);
             function Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Integer,
@@ -277,9 +260,7 @@ package body Vaton with SPARK_Mode is
             Result.Long_Integer := Convert(Partial_Integer, Is_Negative);
             return Result;
          end;
-      elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE <
-        Standard.Long_Long_Integer'Size
-      then
+      elsif Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Long_Integer'Size then
          declare
             Result : Number (Long_Long_Integer);
             function Convert is new Vaton.Integer_Conversions.Convert(Integer_Base => Standard.Long_Long_Integer,

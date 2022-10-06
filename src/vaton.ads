@@ -7,12 +7,26 @@ package Vaton with
 is
    package Big_Numbers renames Ada.Numerics.Big_Numbers;
 
-   BIG_NUMBER_DIGIT_LIMIT : constant Standard.Integer :=
-     1_900; -- Limitation of the Big_Number implementation
+   -- Limitation of the Big_Number implementation
+   BIG_NUMBER_DIGIT_LIMIT : constant Standard.Integer := 1_900;
 
-   type Number_Kind is
-     (NaN, Float, Integer, Long_Float, Long_Long_Float, Long_Integer, Long_Long_Integer, Big_Real,
-      Big_Integer);
+   -- 4 is a good enough approximation from bits to base 10 length (log(10)/log(2) ~ 3.4 would be correct, but would require float conversions)
+   BASE_10_LENGTH_TO_BIT_SIZE : constant Standard.Integer := 4;
+   BASE_10                    : constant Standard.Integer := 10;
+
+   -- 0.3 is approximation for log(2)/log(10) to get lower bound
+   -- Note: 2^Standard.Float'EMax = 10^MAX_FLOAT_EXPONENT => log(2)/log(10) * Standard.Float'EMax = MAX_FLOAT_EXPONENT
+   -- Note: Length of whole part must also be added since normalization moves number to 1.x
+   MAX_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer (0.3 * Standard.Float'Machine_Emax);
+   MIN_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer (0.3 * Standard.Float'Machine_Emin);
+
+   MAX_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer (0.3 * Standard.Long_Float'Machine_Emax);
+   MIN_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer (0.3 * Standard.Long_Float'Machine_Emin);
+
+   MAX_LONG_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer (0.3 * Standard.Long_Long_Float'Machine_Emax);
+   MIN_LONG_LONG_FLOAT_EXPONENT : constant Standard.Integer := Standard.Integer (0.3 * Standard.Long_Long_Float'Machine_Emin);
+
+   type Number_Kind is (NaN, Float, Integer, Long_Float, Long_Long_Float, Long_Integer, Long_Long_Integer, Big_Real, Big_Integer);
 
    type Number (Kind : Number_Kind := NaN) is record
       case Kind is
@@ -84,11 +98,39 @@ is
    function Is_Possible_Piece
      (Partial_Number : Number_Pieces; Character : Wide_Character;
       Decimal_Point  : Wide_Character := '.') return Boolean with
-      Pre => Is_Valid_Decimal_Point (Decimal_Point);
+      Pre => Is_Valid_Decimal_Point (Decimal_Point) and then Is_Valid_Partial_Number(Partial_Number);
 
-   function Is_Valid_Partial_Number (Partial_Number : Number_Pieces) return Boolean;
+   function Is_Valid_Partial_Number (Partial_Number : Number_Pieces) return Boolean
+     with Post => (if Is_Valid_Partial_Number'Result then
+                     not (Digit_Array.Is_Empty (Partial_Number.Whole)
+                       and then (not Digit_Array.Is_Empty (Partial_Number.Fraction)
+                         or else not Digit_Array.Is_Empty (Partial_Number.Exponent)
+                         or else Partial_Number.Exponent_Is_Negative or else Partial_Number.Has_Exponent
+                         or else Partial_Number.Has_Fraction))
+                   and then not (Digit_Array.Last_Index(Partial_Number.Whole) > Digit_Array.No_Index
+                     and then Digit_Array.Length (Partial_Number.Whole) > 1
+                     and then Digit_Array.Element (Partial_Number.Whole, Digit_Array.First_Index (Partial_Number.Whole)) = 0)
+                   and then not (not Digit_Array.Is_Empty (Partial_Number.Fraction)
+                     and then not Partial_Number.Has_Fraction)
+                   and then not (not Digit_Array.Is_Empty (Partial_Number.Exponent)
+                     and then not Partial_Number.Has_Exponent)
+                   and then not (Partial_Number.Exponent_Is_Negative and then not Partial_Number.Has_Exponent)
+                   and then not (not Digit_Array.Is_Empty (Partial_Number.Exponent)
+                     and then To_Integer (Partial_Number.Exponent, Partial_Number.Exponent_Is_Negative).Kind /= Integer)
+                   and then not (Digit_Array.Length (Partial_Number.Whole) > BIG_NUMBER_DIGIT_LIMIT
+                     or else Digit_Array.Length (Partial_Number.Fraction) > BIG_NUMBER_DIGIT_LIMIT
+                     or else Digit_Array.Length (Partial_Number.Exponent) > BIG_NUMBER_DIGIT_LIMIT)
+                  );
 
-   function Is_Valid_Number (Partial_Number : Number_Pieces) return Boolean;
+   function Is_Valid_Number (Partial_Number : Number_Pieces) return Boolean
+     with Post => (if Is_Valid_Number'Result then
+                     Is_Valid_Partial_Number (Partial_Number => Partial_Number)
+                   and then not Digit_Array.Is_Empty (Partial_Number.Whole)
+                   and then not (Partial_Number.Has_Fraction and then Digit_Array.Is_Empty (Partial_Number.Fraction))
+                   and then not (Partial_Number.Has_Exponent and then Digit_Array.Is_Empty (Partial_Number.Exponent))
+                   and then not (Partial_Number.Exponent_Is_Negative and then not Partial_Number.Has_Exponent)
+                   and then not Partial_Number.Next_Must_Be_Digit
+                  );
 
    function Is_Valid_Decimal_Point (Decimal_Point : Wide_Character := '.') return Boolean is
      (not
@@ -99,40 +141,23 @@ is
       Pre => Is_Valid_Number (Partial_Number);
 
    function To_Integer
-     (Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number;
+     (Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Number
+     with Post => (To_Integer'Result.Kind = NaN and then (Digit_Array.Is_Empty (Partial_Integer) or else Digit_Array.Length (Partial_Integer) > BIG_NUMBER_DIGIT_LIMIT))
+     or else (To_Integer'Result.Kind = Integer and then Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Integer'Size)
+     or else (To_Integer'Result.Kind = Long_Integer and then Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Integer'Size
+             and then Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE >= Standard.Integer'Size)
+     or else (To_Integer'Result.Kind = Long_Long_Integer and then Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE < Standard.Long_Long_Integer'Size
+             and then Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE >= Standard.Long_Integer'Size)
+     or else (To_Integer'Result.Kind = Big_Integer and then Digit_Array.Length (Partial_Integer) * BASE_10_LENGTH_TO_BIT_SIZE >= Standard.Long_Long_Integer'Size);
 
    procedure Append
      (Partial_Number : in out Number_Pieces; Character : Wide_Character; Success : out Boolean;
       Decimal_Point  :        Wide_Character := '.') with
-      Pre => Is_Valid_Decimal_Point (Decimal_Point)
-      and then Is_Possible_Piece (Partial_Number, Character, Decimal_Point)
-      and then Is_Valid_Partial_Number (Partial_Number),
-      Post => Is_Valid_Partial_Number (Partial_Number);
+     Pre => Is_Valid_Decimal_Point (Decimal_Point)
+     and then Is_Valid_Partial_Number (Partial_Number)
+     and then Is_Possible_Piece (Partial_Number, Character, Decimal_Point),
+     Post => Is_Valid_Partial_Number (Partial_Number);
 
    procedure Reset (Partial_Number : in out Number_Pieces);
-
-private
-
-   -- 4 is a good enough approximation from bits to base 10 length (log(10)/log(2) ~ 3.4 would be correct, but would require float conversions)
-   BASE_10_LENGTH_TO_BIT_SIZE : constant Standard.Integer := 4;
-   BASE_10                    : constant Standard.Integer := 10;
-
-   -- 0.3 is approximation for log(2)/log(10) to get lower bound
-   -- Note: 2^Standard.Float'EMax = 10^MAX_FLOAT_EXPONENT => log(2)/log(10) * Standard.Float'EMax = MAX_FLOAT_EXPONENT
-   -- Note: Length of whole part must also be added since normalization moves number to 1.x
-   MAX_FLOAT_EXPONENT : constant Standard.Integer :=
-     Standard.Integer (0.3 * Standard.Float'Machine_Emax);
-   MIN_FLOAT_EXPONENT : constant Standard.Integer :=
-     Standard.Integer (0.3 * Standard.Float'Machine_Emin);
-
-   MAX_LONG_FLOAT_EXPONENT : constant Standard.Integer :=
-     Standard.Integer (0.3 * Standard.Long_Float'Machine_Emax);
-   MIN_LONG_FLOAT_EXPONENT : constant Standard.Integer :=
-     Standard.Integer (0.3 * Standard.Long_Float'Machine_Emin);
-
-   MAX_LONG_LONG_FLOAT_EXPONENT : constant Standard.Integer :=
-     Standard.Integer (0.3 * Standard.Long_Long_Float'Machine_Emax);
-   MIN_LONG_LONG_FLOAT_EXPONENT : constant Standard.Integer :=
-     Standard.Integer (0.3 * Standard.Long_Long_Float'Machine_Emin);
 
 end Vaton;
