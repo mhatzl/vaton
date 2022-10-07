@@ -4,38 +4,62 @@ package body Vaton.Float_Conversions with SPARK_Mode is
 
 
    function Combine(Partial_Number : Number_Pieces; Exponent : Standard.Integer) return Float_Base is
-      Combined : Float_Base := To_Float_Base(0);
-      Fraction : Float_Base := To_Float_Base(0);
-      Based_Exponent : Float_Base := To_Float_Base(BASE_10);
-      Old_Index : Natural := 0;
+      BASED_10 : constant Float_Base := To_Float_Base(BASE_10);
       
-      --package To_Big is new Ada.Numerics.Big_Numbers.Big_Reals.Float_Conversions(Num => Float_Base);
+      subtype Pos_Float_Base is Float_Base range 0.0 .. Float_Base'Last / 2.0;      
+      Whole : Pos_Float_Base := To_Float_Base(0);
+      Combined : Pos_Float_Base;
+      
+      subtype Fraction_Float_Base is Float_Base range 0.0 .. BASED_10;
+      Fraction : Fraction_Float_Base := To_Float_Base(0);
+      
+      -- Lemma taken from the SPARK Lemma Library (credit to the SPARK Team)
+      procedure Lemma_Add_Is_Monotonic
+        (Val1 : Float_Base;
+         Val2 : Float_Base;
+         Val3 : Float_Base)
+        with
+          Ghost,
+          Global => null,
+          Pre => (Val1 in Float_Base'First / 2.0 .. Float_Base'Last / 2.0) and then
+          (Val2 in Float_Base'First / 2.0 .. Float_Base'Last / 2.0) and then
+          (Val3 in Float_Base'First / 2.0 .. Float_Base'Last / 2.0) and then
+          Val1 <= Val2,
+          Post => Val1 + Val3 <= Val2 + Val3
+      is begin
+         pragma Assume(Val1 + Val3 <= Val2 + Val3);
+      end Lemma_Add_Is_Monotonic;
+              
    begin
       for Index in
         Digit_Array.First_Index (Partial_Number.Whole) ..
         Digit_Array.Last_Index (Partial_Number.Whole) - 1
       loop
-         Combined := Combined + To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Whole, Index)));
-         Combined := Combined * To_Float_Base(BASE_10);
+         Lemma_Add_Is_Monotonic(To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Whole, Index))), To_Float_Base(Standard.Integer(Digit'Last)), Whole);
          
-         pragma Loop_Invariant (Old_Index < Index);
-         Old_Index := Index;
+         Whole := Whole + To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Whole, Index)));
+         Whole := Whole * BASED_10;
+         
+         pragma Loop_Variant(Increases => Index);
       end loop;
-      Combined := Combined + To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Whole, Digit_Array.Last_Index (Partial_Number.Whole))));
+      Lemma_Add_Is_Monotonic(To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Whole, Digit_Array.Last_Index (Partial_Number.Whole)))), To_Float_Base(Standard.Integer(Digit'Last)), Whole);
+      Combined := Whole + To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Whole, Digit_Array.Last_Index (Partial_Number.Whole))));
       
-      if Partial_Number.Has_Fraction then
-         Old_Index := Natural'Last;
+      if Partial_Number.Has_Fraction and then Digit_Array.Last_Index (Partial_Number.Fraction) < Natural'Last then
          for Index in reverse
            Digit_Array.First_Index (Partial_Number.Fraction) ..
            Digit_Array.Last_Index (Partial_Number.Fraction)
          loop
+            Lemma_Add_Is_Monotonic(To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Fraction, Index))), BASED_10, Fraction);
             Fraction := Fraction + To_Float_Base (Standard.Integer(Digit_Array.Element (Partial_Number.Fraction, Index)));
-            Fraction := Fraction / To_Float_Base(BASE_10);
+            pragma Assert(Fraction < BASED_10);            
+            Fraction := Fraction / BASED_10;
             
-            pragma Loop_Invariant (Old_Index > Index);
-            Old_Index := Index;
+            pragma Loop_Invariant(Fraction < To_Float_Base(1));
+            pragma Loop_Variant(Decreases => Index);
          end loop;
 
+         Lemma_Add_Is_Monotonic(Fraction, To_Float_Base(1), Combined);
          Combined := Combined + Fraction;
       end if;
       
@@ -43,16 +67,16 @@ package body Vaton.Float_Conversions with SPARK_Mode is
          if Exponent = 0 then
             return To_Float_Base(1);
          end if;
-         Based_Exponent := Based_Exponent ** (abs(Exponent));
+         
          if Exponent < 0 then
-            Combined := Combined / Based_Exponent;
+            Combined := Combined / (BASED_10 ** (-Exponent));
          else
-            Combined := Combined * Based_Exponent;
+            Combined := Combined * (BASED_10 ** Exponent);
          end if;
       end if;
 
       if Partial_Number.Whole_Is_Negative then
-         Combined := Combined * To_Float_Base(-1);
+         return Combined * To_Float_Base(-1);
       end if;
       
       return Combined;
@@ -81,11 +105,11 @@ package body Vaton.Float_Conversions with SPARK_Mode is
          if Exponent = 0 then
             return Number'(Kind => Big_Real, Big_Real => Big_Num.Big_Reals.To_Real(1));
          end if;
-         Based_Exponent := Based_Exponent ** (abs(Exponent));
+         
          if Exponent < 0 then
-            Combined := Combined / Based_Exponent;
+            Combined := Combined / (Based_Exponent ** (-Exponent));
          else
-            Combined := Combined * Based_Exponent;
+            Combined := Combined * (Based_Exponent ** Exponent);
          end if;
       end if;
 

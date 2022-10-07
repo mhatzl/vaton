@@ -5,6 +5,8 @@ with Spark_Unbound.Arrays;
 package Vaton with
    SPARK_Mode
 is
+   pragma Unevaluated_Use_Of_Old (Allow);
+
    package Big_Numbers renames Ada.Numerics.Big_Numbers;
 
    -- Limitation of the Big_Number implementation
@@ -156,8 +158,31 @@ is
      Pre => Is_Valid_Decimal_Point (Decimal_Point)
      and then Is_Valid_Partial_Number (Partial_Number)
      and then Is_Possible_Piece (Partial_Number, Character, Decimal_Point),
-     Post => Is_Valid_Partial_Number (Partial_Number);
+     Post => (if Success then
+                (if Character = '-' and then Digit_Array.Is_Empty(Partial_Number.Whole) then Partial_Number.Whole_Is_Negative = True
+                     elsif Character = '-' and then Partial_Number.Has_Exponent then Partial_Number.Exponent_Is_Negative = True
+                   elsif Character = Decimal_Point then Partial_Number.Has_Fraction = True
+                     elsif Character = 'e' or else Character = 'E' then Partial_Number.Has_Exponent = True
+                       elsif Is_Digit(Character) then
+                   (if Partial_Number.Has_Exponent then Digit_Array.Last_Element(Partial_Number.Exponent) = Character_To_Digit(Character)
+                        elsif Partial_Number.Has_Fraction then Digit_Array.Last_Element(Partial_Number.Fraction) = Character_To_Digit(Character)
+                      else Digit_Array.Last_Element(Partial_Number.Whole) = Character_To_Digit(Character)))
+                  else Partial_Number.Has_Exponent'Old = Partial_Number.Has_Exponent
+              and then Partial_Number.Has_Fraction'Old = Partial_Number.Has_Fraction
+              and then Partial_Number.Exponent_Is_Negative'Old = Partial_Number.Exponent_Is_Negative
+              and then Partial_Number.Next_Must_Be_Digit'Old = Partial_Number.Next_Must_Be_Digit
+              and then Partial_Number.Whole_Is_Negative'Old = Partial_Number.Whole_Is_Negative);
 
-   procedure Reset (Partial_Number : in out Number_Pieces);
+   -- mhatzl: Not able to check, since 'Old is not allowed for Arr
+   --and then (if Partial_Number.Whole.Arr /= null then Partial_Number.Whole.Arr'Old /= null and then Partial_Number.Whole.Arr.all'Old = Partial_Number.Whole.Arr.all)
+   --and then (if Partial_Number.Fraction.Arr /= null then Partial_Number.Fraction.Arr.all'Old = Partial_Number.Fraction.Arr.all)
+   --and then (if Partial_Number.Exponent.Arr /= null then Partial_Number.Exponent.Arr.all'Old = Partial_Number.Exponent.Arr.all))
+
+
+   procedure Reset (Partial_Number : in out Number_Pieces)
+     with Post => Partial_Number.Exponent_Is_Negative = False and then Partial_Number.Has_Exponent = False
+     and then Partial_Number.Has_Fraction = False and then Partial_Number.Next_Must_Be_Digit = False
+     and then Partial_Number.Whole_Is_Negative = False and then Digit_Array.Is_Empty(Partial_Number.Whole)
+     and then Digit_Array.Is_Empty(Partial_Number.Fraction) and then Digit_Array.Is_Empty(Partial_Number.Exponent);
 
 end Vaton;

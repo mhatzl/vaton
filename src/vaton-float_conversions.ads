@@ -9,12 +9,18 @@ package Vaton.Float_Conversions with SPARK_Mode is
       with function "**"(L : Float_Base; R : Standard.Integer) return Float_Base;
       with function "<"(L,R : Float_Base) return Boolean;
       with function To_Float_Base(Number : Standard.Integer) return Float_Base;
+      
+      MAX_DIGITS : Standard.Integer;
+      MIN_DIGITS : Standard.Integer;
    function Combine(Partial_Number : Number_Pieces; Exponent : Standard.Integer) return Float_Base
-     with Pre => Is_Valid_Number(Partial_Number) and then Exponent <= Standard.Integer'Max(BIG_NUMBER_DIGIT_LIMIT, MAX_LONG_LONG_FLOAT_EXPONENT)
-     and then Exponent >= Standard.Integer'Min(-BIG_NUMBER_DIGIT_LIMIT, MIN_LONG_LONG_FLOAT_EXPONENT);
+     with Pre => Is_Valid_Number(Partial_Number) and then Digit_Array.Length (Partial_Number.Whole) <= MAX_DIGITS - Digit_Array.Length (Partial_Number.Fraction)
+      and then (if Exponent >= 0 then Exponent <= MAX_DIGITS - Digit_Array.Length (Partial_Number.Fraction) - Digit_Array.Length (Partial_Number.Whole)
+     	else Exponent + Digit_Array.Length (Partial_Number.Whole) + Digit_Array.Length (Partial_Number.Fraction) >= MIN_DIGITS);
    
    function Convert_Big_Real(Partial_Number : Number_Pieces; Exponent : Standard.Integer) return Number
-     with Pre => Is_Valid_Number(Partial_Number),
+     with Pre => Is_Valid_Number(Partial_Number) and then Digit_Array.Length (Partial_Number.Whole) <= BIG_NUMBER_DIGIT_LIMIT - Digit_Array.Length (Partial_Number.Fraction)
+      and then (if Exponent >= 0 then Exponent <= BIG_NUMBER_DIGIT_LIMIT - Digit_Array.Length (Partial_Number.Fraction) - Digit_Array.Length (Partial_Number.Whole)
+     	else Exponent + Digit_Array.Length (Partial_Number.Whole) + Digit_Array.Length (Partial_Number.Fraction) >= (-BIG_NUMBER_DIGIT_LIMIT)),
      Post => Convert_Big_Real'Result.Kind = Big_Real;
    
    
