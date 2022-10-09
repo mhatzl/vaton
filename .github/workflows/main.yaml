@@ -16,7 +16,8 @@ jobs:
           version: 1.2.0-rc1
 
       - run: alr build --development
-      - run: alr gnatprove -j0 --level=4
+      # gnatprove takes too much time
+      # - run: alr gnatprove -j0 --level=4
 
       # Build and run unit tests
       - run: cd tests && alr build

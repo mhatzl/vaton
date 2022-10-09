@@ -28,9 +28,11 @@ package body Integers_Suite is
          Integer_Suite.Add_Test(Long_Integers_Test_Caller.Create("Long_Integer Create_Negative_Integer", Long_Integers.Create_Negative_Integer'Access));
       end if;
       
-      -- Long Long Integer Tests --------------------------------- 
-      Integer_Suite.Add_Test(Long_Long_Integers_Test_Caller.Create("Long_Long_Integer Create_Positive_Integer", Long_Long_Integers.Create_Positive_Integer'Access));
-      Integer_Suite.Add_Test(Long_Long_Integers_Test_Caller.Create("Long_Long_Integer Create_Negative_Integer", Long_Long_Integers.Create_Negative_Integer'Access));
+      -- Long Long Integer Tests ---------------------------------
+      if Standard.Long_Integer'Size < Standard.Long_Long_Integer'Size then 
+         Integer_Suite.Add_Test(Long_Long_Integers_Test_Caller.Create("Long_Long_Integer Create_Positive_Integer", Long_Long_Integers.Create_Positive_Integer'Access));
+         Integer_Suite.Add_Test(Long_Long_Integers_Test_Caller.Create("Long_Long_Integer Create_Negative_Integer", Long_Long_Integers.Create_Negative_Integer'Access));
+      end if;
       
       -- Big Integer Tests --------------------------------- 
       Integer_Suite.Add_Test(Big_Integers_Test_Caller.Create("Big_Integer Create_Positive_Integer", Big_Integers.Create_Positive_Integer'Access));

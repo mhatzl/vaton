@@ -224,11 +224,6 @@ package body Vaton with SPARK_Mode is
                                                                       "-" => Standard."-",
                                                                       "+" => Standard."+",
                                                                       "*" => Standard."*",
-                                                                      "/" => Standard."/",
-                                                                      "**" => Standard."**",
-                                                                      "<" => Standard."<",
-                                                                      ">" => Standard.">",
-                                                                      ">=" => Standard.">=",
                                                                       To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Integer);
          begin
             Result.Integer := Convert(Partial_Integer, Is_Negative);
@@ -241,11 +236,6 @@ package body Vaton with SPARK_Mode is
                                                                       "-" => Standard."-",
                                                                       "+" => Standard."+",
                                                                       "*" => Standard."*",
-                                                                      "/" => Standard."/",
-                                                                      "**" => Standard."**",
-                                                                      "<" => Standard."<",
-                                                                      ">" => Standard.">",
-                                                                      ">=" => Standard.">=",
                                                                       To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Long_Integer);
          begin
             Result.Long_Integer := Convert(Partial_Integer, Is_Negative);
@@ -258,11 +248,6 @@ package body Vaton with SPARK_Mode is
                                                                       "-" => Standard."-",
                                                                       "+" => Standard."+",
                                                                       "*" => Standard."*",
-                                                                      "/" => Standard."/",
-                                                                      "**" => Standard."**",
-                                                                      "<" => Standard."<",
-                                                                      ">" => Standard.">",
-                                                                      ">=" => Standard.">=",
                                                                       To_Integer_Base => Vaton.Integer_Conversions.Integer_To_Long_Long_Integer);
          begin
             Result.Long_Long_Integer := Convert(Partial_Integer, Is_Negative);

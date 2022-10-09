@@ -6,11 +6,6 @@ package Vaton.Integer_Conversions with SPARK_Mode is
       with function "-"(L,R : Integer_Base) return Integer_Base;
       with function "+"(L,R : Integer_Base) return Integer_Base;
       with function "*"(L,R : Integer_Base) return Integer_Base;
-      with function "/"(L,R : Integer_Base) return Integer_Base;
-      with function "**"(L : Integer_Base; R : Standard.Natural) return Integer_Base;
-      with function "<"(L,R : Integer_Base) return Boolean;
-      with function ">"(L,R : Integer_Base) return Boolean;
-      with function ">="(L,R : Integer_Base) return Boolean;
       with function To_Integer_Base(Number : Standard.Integer) return Integer_Base;
    function Convert(Partial_Integer : Digit_Array.Unbound_Array; Is_Negative : Boolean) return Integer_Base
      with Pre => not Digit_Array.Is_Empty(Partial_Integer) and then Digit_Array.Length (Partial_Integer) <= BIG_NUMBER_DIGIT_LIMIT
