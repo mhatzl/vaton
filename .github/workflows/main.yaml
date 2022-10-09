@@ -1,0 +1,45 @@
+on:
+  push:
+  pull_request:
+  workflow_dispatch:   # - A manual run of the workflow is requested from the GitHub web interface.
+  release:
+    types: [created]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      - uses: alire-project/setup-alire@v1
+        with:
+          version: 1.2.0-rc1
+
+      - run: alr build --development
+      - run: alr gnatprove -j0 --level=4
+
+      # Build and run unit tests
+      - run: cd tests && alr build
+      - run: cd tests && alr exec ./bin/tests
+
+      # - name: Make Release Manifest
+      #   run: |
+      #     alr config --set --global user.github_login ${{github.repository_owner}}
+      #     alr publish ${{github.server_url}}/${{github.repository}} ${{github.sha}}
+      
+      # - name: Get Release Manifest PATH
+      #   run: |
+      #     export MANIFEST_PATHNAME=$(ls alire/releases/*.toml | head -n 1)
+      #     echo MANIFEST_PATHNAME=$MANIFEST_PATHNAME >> $GITHUB_ENV
+      #     echo MANIFEST_NAME=$(basename $MANIFEST_PATHNAME) >> $GITHUB_ENV
+
+      # - name: Upload release manifest
+      #   if: (github.event_name == 'release')
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ github.event.release.upload_url }}
+      #     asset_path: ${{ env.MANIFEST_PATHNAME }}
+      #     asset_name: ${{ env.MANIFEST_NAME }}
+      #     asset_content_type: application/toml
