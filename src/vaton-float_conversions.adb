@@ -89,7 +89,7 @@ package body Vaton.Float_Conversions with SPARK_Mode is
       Combined : Big_Num.Big_Reals.Valid_Big_Real := Number_To_Big_Real(To_Integer(Partial_Number.Whole, False));
       Fraction : Big_Num.Big_Reals.Valid_Big_Real;
       Divisor : Big_Num.Big_Integers.Valid_Big_Integer;
-      Based_Exponent : Big_Num.Big_Reals.Valid_Big_Real := Ada.Numerics.Big_Numbers.Big_Reals.To_Real(BASE_10);
+      Based_Exponent : constant Big_Num.Big_Reals.Valid_Big_Real := Ada.Numerics.Big_Numbers.Big_Reals.To_Real(BASE_10);
       
       use type Big_Num.Big_Reals.Valid_Big_Real;
       use type Big_Num.Big_Integers.Valid_Big_Integer;

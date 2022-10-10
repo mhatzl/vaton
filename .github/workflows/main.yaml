@@ -15,7 +15,7 @@ jobs:
         with:
           version: 1.2.0-rc1
 
-      - run: alr build --development
+      - run: alr build --release
       # gnatprove takes too much time
       # - run: alr gnatprove -j0 --level=4
 

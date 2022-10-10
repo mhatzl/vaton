@@ -1,6 +1,6 @@
 name = "tests"
 description = "Test project for the Vaton crate"
-version = "0.1.0-dev"
+version = "0.1.0"
 
 authors = ["Manuel Hatzl"]
 maintainers = ["Manuel Hatzl <hatzlmanuel@outlook.com>"]
@@ -8,10 +8,15 @@ maintainers-logins = ["mhatzl"]
 
 executables = ["tests"]
 [[depends-on]]
-vaton = "~0.1.0-dev"
+vaton = "~0.1.0"
 [[pins]]
 vaton = { path='..' }
 [[depends-on]]
 spark_unbound = "~0.2.1"
 [[depends-on]]
 aunit = "^22.0.0"
+gnatprove = "^12.1.1"
+
+[build-switches]
+"*".style_checks = "No"
+"*".ada_version = "Ada2022"
